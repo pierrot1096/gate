@@ -81,6 +81,7 @@ jobs:
               for line in lines:
                   if f'#{country}-住宅-' in line:
                       kept.append(line)
+          kept = ['edgetunnel.pierrot1096.workers.dev:443' + l[l.index('#'):] if '#' in l else l for l in kept]
           path.write_text(('\n'.join(kept) + ('\n' if kept else '')), encoding='utf-8')
           print(f'filtered nodes.txt: {len(lines)} -> {len(kept)} (US/JP/KR residential only)')
           EOF
