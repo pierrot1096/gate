@@ -2,8 +2,8 @@ name: VPN Gate Node Check
 
 on:
   schedule:
-    # 每 24 小时运行一次（UTC 00:00，北京时间 08:00）
-    - cron: '0 0 * * *'
+    # 每 30 分钟运行一次（用户配置：节点自动轮换）
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       max_nodes:
@@ -65,7 +65,25 @@ jobs:
           CHECK_TIMEOUT: ${{ github.event.inputs.timeout || '25' }}
           MAX_CHECK_NODES: ${{ github.event.inputs.max_nodes || '0' }}
           MIN_SUCCESS_RATIO: '0'
+          MAX_DATACENTER_PER_COUNTRY: '0'
+          MAX_RESIDENTIAL_PER_COUNTRY: '20'
         run: python vpngate.py
+
+      - name: Filter nodes.txt to US/JP/KR residential only (US > JP > KR)
+        run: |
+          python3 - << 'EOF'
+          import pathlib
+          path = pathlib.Path('public/nodes.txt')
+          lines = [l.rstrip() for l in path.read_text(encoding='utf-8').splitlines() if l.strip()]
+          order = ['美国', '日本', '韩国']
+          kept = []
+          for country in order:
+              for line in lines:
+                  if f'#{country}-住宅-' in line:
+                      kept.append(line)
+          path.write_text(('\n'.join(kept) + ('\n' if kept else '')), encoding='utf-8')
+          print(f'filtered nodes.txt: {len(lines)} -> {len(kept)} (US/JP/KR residential only)')
+          EOF
 
       - name: Ensure GitHub Pages is enabled
         env:
